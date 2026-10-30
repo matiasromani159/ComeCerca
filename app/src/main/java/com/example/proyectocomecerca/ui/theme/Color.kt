@@ -1,4 +1,4 @@
-package com.example.comecerca.ui.theme
+package com.example.proyectocomecerca.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

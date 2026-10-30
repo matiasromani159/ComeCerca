@@ -1,4 +1,4 @@
-package com.example.comecerca
+package com.example.proyectocomecerca
 
 import org.junit.Test
 

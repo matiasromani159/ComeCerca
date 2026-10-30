@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.comecerca"
+    namespace = "com.example.proyectocomecerca"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.comecerca"
+        applicationId = "com.example.proyectocomecerca"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -37,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation("androidx.compose.material:material-icons-core")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
