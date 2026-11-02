@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Place
@@ -18,31 +19,37 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.proyectocomecerca.ui.screens.DetailScreen
 import com.example.proyectocomecerca.ui.screens.FavoritesScreen
 import com.example.proyectocomecerca.ui.screens.NearbyScreen
-import com.example.proyectocomecerca.ui.screens.DetailScreen
 import com.example.proyectocomecerca.ui.theme.ProyectoComeCercaTheme
 
 class MainActivity : ComponentActivity() {
+    private val vm: FoodViewModel by viewModels()   // NUEVO: el ViewModel se crea aquí
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { ProyectoComeCercaTheme { AppNav() } }
+        setContent { ProyectoComeCercaTheme { AppNav(vm) } }
     }
 }
 
 // El "mapa" de pantallas: cada composable("ruta") es una pantalla.
 @Composable
-fun AppNav() {
+fun AppNav(vm: FoodViewModel) {
     val nav = rememberNavController()
     NavHost(navController = nav, startDestination = "nearby") {
-        composable("nearby") { NearbyScreen(nav) }
-        composable("favorites") { FavoritesScreen(nav) }
+        composable("nearby") { NearbyScreen(vm, nav) }
+        composable("favorites") { FavoritesScreen(vm, nav) }
         composable(
             route = "detail/{id}",   // {id} = hueco para el número
             arguments = listOf(navArgument("id") { type = NavType.LongType })
         ) { entry ->
-            DetailScreen(entry.arguments!!.getLong("id"), onBack = { nav.popBackStack() })
+            DetailScreen(
+                vm,
+                entry.arguments!!.getLong("id"),
+                onBack = { nav.popBackStack() }
+            )
         }
     }
 }

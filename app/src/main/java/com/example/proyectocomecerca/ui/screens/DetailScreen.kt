@@ -1,6 +1,5 @@
 package com.example.proyectocomecerca.ui.screens
 
-
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -8,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -20,16 +21,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.proyectocomecerca.model.fakeRestaurants
+import com.example.proyectocomecerca.FoodViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(id: Long, onBack: () -> Unit) {
+fun DetailScreen(vm: FoodViewModel, id: Long, onBack: () -> Unit) {
     val context = LocalContext.current
-    val r = fakeRestaurants.find { it.id == id }
+    val favFlow = remember(id) { vm.favorite(id) }
+    val fav by favFlow.collectAsState(initial = null)   // null = no es favorito
+    val r = vm.restaurant(id)
 
     Scaffold(
         topBar = {
@@ -44,21 +50,38 @@ fun DetailScreen(id: Long, onBack: () -> Unit) {
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).padding(16.dp),
+            Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (r == null) { Text("No encontrado"); return@Column }
-            Text(r.name, style = MaterialTheme.typography.headlineMedium)
-            Text(r.cuisine)
-            r.address?.let { Text(it) }
+            // Los datos pueden venir del favorito guardado o de la búsqueda
+            val f = fav
+            val name = f?.name ?: r?.name
+            val lat = f?.lat ?: r?.lat
+            val lon = f?.lon ?: r?.lon
+            if (name == null || lat == null || lon == null) {
+                Text("Cargando…")
+                return@Column
+            }
+
+            Text(name, style = MaterialTheme.typography.headlineMedium)
+            Text(f?.cuisine ?: r?.cuisine ?: "")
+            (f?.address ?: r?.address)?.let { Text(it) }
+            r?.let { Text("A ${it.distanceM} m de ti") }
+            r?.openingHours?.let { Text("Horario: $it") }
+
             Button(
-                onClick = { openRoute(context, r.lat, r.lon) },
+                onClick = { openRoute(context, lat, lon) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Cómo llegar") }
-            OutlinedButton(
-                onClick = { /* DÍA 2: guardar en Room */ },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Guardar en favoritos") }
+
+            if (f == null) {
+                OutlinedButton(
+                    onClick = { r?.let { vm.addFavorite(it) } },   // CREATE
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Guardar en favoritos") }
+            } else {
+                Text("Está en tus favoritos")   // DÍA 3: aquí va RatingEditor
+            }
         }
     }
 }
