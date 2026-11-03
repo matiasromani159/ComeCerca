@@ -9,27 +9,51 @@ import androidx.lifecycle.viewModelScope
 import com.example.proyectocomecerca.data.AppDatabase
 import com.example.proyectocomecerca.data.Favorite
 import com.example.proyectocomecerca.model.Restaurant
-import com.example.proyectocomecerca.model.fakeRestaurants
+import com.example.proyectocomecerca.model.toRestaurant
+import com.example.proyectocomecerca.network.Api
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// El ViewModel guarda los datos de las pantallas y sobrevive al girar el móvil.
 class FoodViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).favoriteDao()
 
-    // Favoritos: se actualiza solo cada vez que cambia la base de datos
     val favorites = dao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Restaurantes cercanos: de momento los de mentira (día 5: la API)
-    var restaurants by mutableStateOf(fakeRestaurants)
-        private set
+    var restaurants by mutableStateOf<List<Restaurant>>(emptyList()); private set
+    var loading by mutableStateOf(false); private set
+    var error by mutableStateOf<String?>(null); private set
+    var filter by mutableStateOf("Todas")   // chip elegido
+
+    // Lo que se ve en pantalla según el filtro de cocina
+    val visible: List<Restaurant>
+        get() = if (filter == "Todas") restaurants
+        else restaurants.filter { it.cuisine == filter }
+
+    fun markLoading() { loading = true; error = null }
+    fun showError(msg: String) { loading = false; error = msg }
+
+    fun search(lat: Double, lon: Double) = viewModelScope.launch {
+        loading = true; error = null
+        try {
+            // Lenguaje de Overpass: restaurantes en 1000 m alrededor de (lat, lon)
+            val query = "[out:json][timeout:25];" +
+                    "nwr[\"amenity\"=\"restaurant\"](around:1000,$lat,$lon);out center;"
+            restaurants = Api.overpass.search(query).elements
+                .mapNotNull { it.toRestaurant(lat, lon) }
+                .sortedBy { it.distanceM }
+            if (restaurants.isEmpty()) error = "No hay restaurantes a menos de 1 km."
+        } catch (e: Exception) {
+            error = "No se pudieron cargar los restaurantes. Revisa tu conexión."
+        } finally {
+            loading = false
+        }
+    }
 
     fun restaurant(id: Long) = restaurants.find { it.id == id }
     fun favorite(id: Long) = dao.getById(id)
 
-    // launch = ejecutar en segundo plano para no congelar la pantalla
     fun addFavorite(r: Restaurant) = viewModelScope.launch {
         dao.insert(Favorite(r.id, r.name, r.cuisine, r.lat, r.lon, r.address))
     }
