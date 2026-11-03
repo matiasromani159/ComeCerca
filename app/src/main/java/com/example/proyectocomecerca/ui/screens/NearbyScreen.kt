@@ -4,39 +4,16 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -55,11 +32,15 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
     val context = LocalContext.current
     val favorites by vm.favorites.collectAsState()
     val favIds = favorites.map { it.id }.toSet()
+    val favById = favorites.associateBy { it.id }                       // NUEVO
+
+    // Lista final: filtro de cocina + ocultar donde no volverías        // NUEVO
+    val list = vm.visible.filterNot { vm.hideBad && favById[it.id]?.wouldReturn == false }
 
     fun searchHere() {
         vm.markLoading()
         getLocation(context,
-            onResult = { lat, lon -> vm.search(lat, lon) },   // GPS -> API
+            onResult = { lat, lon -> vm.search(lat, lon) },
             onFail = { vm.showError("No se pudo obtener tu ubicación. Activa el GPS.") })
     }
 
@@ -80,7 +61,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
             Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
-    LaunchedEffect(Unit) { if (vm.restaurants.isEmpty()) start() }  // no repetir al volver
+    LaunchedEffect(Unit) { if (vm.restaurants.isEmpty()) start() }
 
     Scaffold(
         topBar = {
@@ -98,37 +79,56 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                 )
             )
         },
-        bottomBar = { BottomBar(nav, "nearby") }
+        bottomBar = { BottomBar(nav, "nearby") },
+        floatingActionButton = {                                          // NUEVO
+            ExtendedFloatingActionButton(
+                onClick = {
+                    list.filter { favById[it.id]?.wouldReturn != false }  // sin los "no volvería"
+                        .randomOrNull()
+                        ?.let { nav.navigate("detail/${it.id}") }
+                },
+                icon = { Icon(Icons.Default.Star, contentDescription = null) },
+                text = { Text("Sorpréndeme") }
+            )
+        }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            LazyRow(   // chips de cocina
+            LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {                                                    // NUEVO
+                    FilterChip(
+                        selected = vm.hideBad,
+                        onClick = { vm.hideBad = !vm.hideBad },
+                        label = { Text("Ocultar donde no volvería") }
+                    )
+                }
                 items(FILTERS) { label ->
                     FilterChip(
                         selected = vm.filter == label,
-                        onClick = { vm.filter = label },   // botón funcional
+                        onClick = { vm.filter = label },
                         label = { Text(label) }
                     )
                 }
             }
-
             val err = vm.error
             when {
                 vm.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
                 err != null -> ErrorBox(err, onRetry = { start() })
-                vm.visible.isEmpty() ->
+                list.isEmpty() ->                                         // CAMBIA
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No hay restaurantes de este tipo cerca")
                     }
                 else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    // 88.dp abajo para que el botón flotante no tape la última tarjeta
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp,
+                        end = 16.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(vm.visible, key = { it.id }) { r ->
+                    items(list, key = { it.id }) { r ->                   // CAMBIA
                         Card(
                             onClick = { nav.navigate("detail/${r.id}") },
                             colors = CardDefaults.cardColors(
@@ -140,6 +140,14 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                                 Column(Modifier.weight(1f)) {
                                     Text(r.name, style = MaterialTheme.typography.titleMedium)
                                     Text("${r.cuisine} · ${r.distanceM} m")
+                                    favById[r.id]?.let { f ->             // NUEVO
+                                        Text(
+                                            "★".repeat(f.rating) +
+                                                    if (f.wouldReturn) " · Volverías" else " · No volverías",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                                 if (r.id in favIds) {
                                     Icon(Icons.Default.Favorite, "En favoritos",

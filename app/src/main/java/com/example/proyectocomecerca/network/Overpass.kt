@@ -6,6 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.http.Url
 import java.util.concurrent.TimeUnit
 
 // Forma del JSON que devuelve Overpass (solo los campos que usamos)
@@ -22,13 +23,20 @@ data class OsmElement(
 
 data class OsmCenter(val lat: Double, val lon: Double)
 
-// Retrofit: una interfaz con la llamada. Retrofit escribe el código por ti.
+// Retrofit: una interfaz con la llamada. La URL completa se pasa con @Url
+// para poder probar varios servidores.
 interface OverpassApi {
-    @GET("api/interpreter")
-    suspend fun search(@Query("data") query: String): OverpassResponse
+    @GET
+    suspend fun search(@Url url: String, @Query("data") query: String): OverpassResponse
 }
 
 object Api {
+    // Servidores a probar, en orden. Si uno falla, se prueba el siguiente.
+    val ENDPOINTS = listOf(
+        "https://overpass-api.de/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    )
+
     val overpass: OverpassApi by lazy {
         val client = OkHttpClient.Builder()
             .readTimeout(30, TimeUnit.SECONDS) // Overpass a veces tarda
@@ -39,7 +47,7 @@ object Api {
                 )
             }).build()
         Retrofit.Builder()
-            .baseUrl("https://overpass-api.de/") // HTTPS
+            .baseUrl("https://overpass-api.de/") // obligatoria; las llamadas usan @Url
             .client(client)
             .addConverterFactory(GsonConverterFactory.create()) // JSON -> clases Kotlin
             .build()

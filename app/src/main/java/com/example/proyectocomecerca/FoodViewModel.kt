@@ -1,6 +1,7 @@
 package com.example.proyectocomecerca
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,9 +25,9 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     var restaurants by mutableStateOf<List<Restaurant>>(emptyList()); private set
     var loading by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null); private set
-    var filter by mutableStateOf("Todas")   // chip elegido
+    var filter by mutableStateOf("Todas")
+    var hideBad by mutableStateOf(false)
 
-    // Lo que se ve en pantalla según el filtro de cocina
     val visible: List<Restaurant>
         get() = if (filter == "Todas") restaurants
         else restaurants.filter { it.cuisine == filter }
@@ -36,19 +37,24 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
 
     fun search(lat: Double, lon: Double) = viewModelScope.launch {
         loading = true; error = null
-        try {
-            // Lenguaje de Overpass: restaurantes en 1000 m alrededor de (lat, lon)
-            val query = "[out:json][timeout:25];" +
-                    "nwr[\"amenity\"=\"restaurant\"](around:1000,$lat,$lon);out center;"
-            restaurants = Api.overpass.search(query).elements
-                .mapNotNull { it.toRestaurant(lat, lon) }
-                .sortedBy { it.distanceM }
-            if (restaurants.isEmpty()) error = "No hay restaurantes a menos de 1 km."
-        } catch (e: Exception) {
-            error = "No se pudieron cargar los restaurantes. Revisa tu conexión."
-        } finally {
-            loading = false
+        val query = "[out:json][timeout:25];" +
+                "nwr[\"amenity\"=\"restaurant\"](around:1000,$lat,$lon);out center;"
+        var failed = true
+        // Probamos los servidores en orden; con el primero que responda, paramos
+        for (url in Api.ENDPOINTS) {
+            try {
+                restaurants = Api.overpass.search(url, query).elements
+                    .mapNotNull { it.toRestaurant(lat, lon) }
+                    .sortedBy { it.distanceM }
+                failed = false
+                break
+            } catch (e: Exception) {
+                Log.e("ComeCerca", "Fallo Overpass en $url", e)
+            }
         }
+        if (failed) error = "No se pudieron cargar los restaurantes. Revisa tu conexión."
+        else if (restaurants.isEmpty()) error = "No hay restaurantes a menos de 1 km."
+        loading = false
     }
 
     fun restaurant(id: Long) = restaurants.find { it.id == id }
