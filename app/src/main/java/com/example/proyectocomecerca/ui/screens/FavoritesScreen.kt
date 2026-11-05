@@ -30,7 +30,8 @@ import com.example.proyectocomecerca.FoodViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(vm: FoodViewModel, nav: NavController) {
-    val favorites by vm.favorites.collectAsState()   // READ desde Room
+    //collectAsState: escucha el StateFlow. Cuando Room cambia, esta pantalla se redibuja.
+    val favorites by vm.favorites.collectAsState()
 
     Scaffold(
         topBar = {

@@ -25,30 +25,30 @@ import com.example.proyectocomecerca.ui.screens.NearbyScreen
 import com.example.proyectocomecerca.ui.theme.ProyectoComeCercaTheme
 
 class MainActivity : ComponentActivity() {
-    private val vm: FoodViewModel by viewModels()   // NUEVO: el ViewModel se crea aquí
+    private val vm: FoodViewModel by viewModels()   //el ViewModel se crea aquí
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge()                                                  //la app ocupa toda la pantalla
         setContent { ProyectoComeCercaTheme { AppNav(vm) } }
     }
 }
 
-// El "mapa" de pantallas: cada composable("ruta") es una pantalla.
+//El "mapa" de pantallas: cada composable("ruta") es una pantalla, como las URLs de una web
 @Composable
 fun AppNav(vm: FoodViewModel) {
-    val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = "nearby") {
+    val nav = rememberNavController()                                       //maneja historial pantallas
+    NavHost(navController = nav, startDestination = "nearby") {             //empieza en Cerca
         composable("nearby") { NearbyScreen(vm, nav) }
         composable("favorites") { FavoritesScreen(vm, nav) }
         composable(
-            route = "detail/{id}",   // {id} = hueco para el número
+            route = "detail/{id}",   //{id} = hueco para el número
             arguments = listOf(navArgument("id") { type = NavType.LongType })
         ) { entry ->
             DetailScreen(
                 vm,
-                entry.arguments!!.getLong("id"),
-                onBack = { nav.popBackStack() }
+                entry.arguments!!.getLong("id"),                //lee el id de la ruta
+                onBack = { nav.popBackStack() }                             //volver = quitar del historial
             )
         }
     }
@@ -60,13 +60,13 @@ fun BottomBar(nav: NavController, current: String) {
     NavigationBar {
         NavigationBarItem(
             selected = current == "nearby",
-            onClick = { nav.popBackStack("nearby", inclusive = false) },
+            onClick = { nav.popBackStack("nearby", inclusive = false) },        //vuelve a Cerca
             icon = { Icon(Icons.Default.Place, contentDescription = null) },
             label = { Text("Cerca") }
         )
         NavigationBarItem(
             selected = current == "favorites",
-            onClick = { nav.navigate("favorites") { launchSingleTop = true } },
+            onClick = { nav.navigate("favorites") { launchSingleTop = true } },     //no duplicarla
             icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
             label = { Text("Favoritos") }
         )

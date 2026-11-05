@@ -13,6 +13,8 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile private var INSTANCE: AppDatabase? = null
 
         // Una sola base de datos para toda la app (patrón singleton)
+        //Singleton: crea la base de datos solo UNA vez para toda la app.
+        //synchronized evita que dos hilos la creen a la vez.
         fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             Room.databaseBuilder(
                 context.applicationContext,

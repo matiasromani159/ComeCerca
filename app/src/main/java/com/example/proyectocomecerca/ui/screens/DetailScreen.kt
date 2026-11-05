@@ -23,7 +23,7 @@ import com.example.proyectocomecerca.data.Favorite
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(vm: FoodViewModel, id: Long, onBack: () -> Unit) {
-    val context = LocalContext.current
+    val context = LocalContext.current                              //necesario para abrir otras apps
     val favFlow = remember(id) { vm.favorite(id) }
     val fav by favFlow.collectAsState(initial = null)
     val r = vm.restaurant(id)
@@ -56,10 +56,10 @@ fun DetailScreen(vm: FoodViewModel, id: Long, onBack: () -> Unit) {
             r?.let { Text("A ${it.distanceM} m de ti") }
             r?.openingHours?.let { Text("Horario: $it") }
 
-            Button(onClick = { openRoute(context, lat, lon) },
+            Button(onClick = { openRoute(context, lat, lon) },              //abre google maps
                 modifier = Modifier.fillMaxWidth()) { Text("Cómo llegar") }
 
-            OutlinedButton(onClick = {                                    // NUEVO: Compartir
+            OutlinedButton(onClick = {                                    //NUEVO: Compartir
                 val text = "Mira este sitio: $name\n" +
                         "https://www.google.com/maps/search/?api=1&query=$lat,$lon"
                 val send = Intent(Intent.ACTION_SEND).apply {
@@ -70,11 +70,13 @@ fun DetailScreen(vm: FoodViewModel, id: Long, onBack: () -> Unit) {
             }, modifier = Modifier.fillMaxWidth()) { Text("Compartir") }
 
             if (f == null) {
+                //No es favorito -> botón para CREAR
                 OutlinedButton(
                     onClick = { r?.let { vm.addFavorite(it) } },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Guardar en favoritos") }
             } else {
+                //Ya es favorito -> editor para ACTUALIZAR o BORRAR
                 RatingEditor(
                     fav = f,
                     onSave = {
@@ -82,15 +84,18 @@ fun DetailScreen(vm: FoodViewModel, id: Long, onBack: () -> Unit) {
                         Toast.makeText(context, "Valoración guardada",
                             Toast.LENGTH_SHORT).show()
                     },
-                    onDelete = { vm.delete(f); onBack() }
+                    onDelete = { vm.delete(f); onBack() } //borra y vuelve atrás
                 )
             }
         }
     }
 }
 
+//Composable reutilizable. Recibe el favorito y DOS funciones (qué hacer al guardar/borrar)
 @Composable
 fun RatingEditor(fav: Favorite, onSave: (Favorite) -> Unit, onDelete: () -> Unit) {
+
+    //Copias locales: lo que el usuario toca ANTES de pulsar "Guardar"
     var rating by remember(fav.id) { mutableIntStateOf(fav.rating) }
     var wouldReturn by remember(fav.id) { mutableStateOf(fav.wouldReturn) }
     var note by remember(fav.id) { mutableStateOf(fav.note) }

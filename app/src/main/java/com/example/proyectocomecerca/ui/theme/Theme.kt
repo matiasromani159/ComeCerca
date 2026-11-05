@@ -5,7 +5,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Nuestros colores (terracota). Sin dynamicColor, para que Android 12+ no los ignore.
+// Nuestros colores (terracota).
 private val Esquema = lightColorScheme(
     primary = Color(0xFFA63D2A), onPrimary = Color.White,   // terracota
     secondaryContainer = Color(0xFFF6D9CF),                 // chips seleccionados
@@ -14,6 +14,8 @@ private val Esquema = lightColorScheme(
     surfaceContainer = Color(0xFFF3EBE3)                    // barra inferior
 )
 
+//Envuelve toda la app (se usa en MainActivity). Sin dynamicColor:
+//si no, en Android 12+ el móvil pondría los colores del fondo de pantalla.
 @Composable
 fun ProyectoComeCercaTheme(content: @Composable () -> Unit) {
     MaterialTheme(

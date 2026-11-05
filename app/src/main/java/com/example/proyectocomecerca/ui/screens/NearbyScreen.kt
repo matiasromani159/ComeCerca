@@ -31,12 +31,13 @@ import com.example.proyectocomecerca.model.FILTERS
 fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
     val context = LocalContext.current
     val favorites by vm.favorites.collectAsState()
-    val favIds = favorites.map { it.id }.toSet()
-    val favById = favorites.associateBy { it.id }                       // NUEVO
+    val favIds = favorites.map { it.id }.toSet()            //ids de favoritos (para el corazón)
+    val favById = favorites.associateBy { it.id }           // id -> Favorite (para las estrellas)
 
-    // Lista final: filtro de cocina + ocultar donde no volverías        // NUEVO
+    // Lista final: filtro de cocina + ocultar donde no volverías
     val list = vm.visible.filterNot { vm.hideBad && favById[it.id]?.wouldReturn == false }
 
+    //GPS -> API
     fun searchHere() {
         vm.markLoading()
         getLocation(context,
@@ -44,6 +45,8 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
             onFail = { vm.showError("No se pudo obtener tu ubicación. Activa el GPS.") })
     }
 
+    //PERMISO (requisito): este "lanzador" muestra el diálogo de Android
+    //Lo de dentro se ejecuta cuando el usuario responde
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
@@ -51,6 +54,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
         else vm.showError("Sin permiso de ubicación no puedo buscar restaurantes cerca de ti.")
     }
 
+    //¿Ya tengo permiso? Sí -> busco. No -> lo pido
     fun start() {
         val granted = listOf(Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -61,6 +65,8 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
             Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
+    //Se ejecuta UNA vez al entrar en la pantalla (no en cada redibujado)
+    //Si ya hay restaurantes (volvemos de Detalle), no repite la búsqueda
     LaunchedEffect(Unit) { if (vm.restaurants.isEmpty()) start() }
 
     Scaffold(
@@ -80,10 +86,10 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
             )
         },
         bottomBar = { BottomBar(nav, "nearby") },
-        floatingActionButton = {                                          // NUEVO
+        floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    list.filter { favById[it.id]?.wouldReturn != false }  // sin los "no volvería"
+                    list.filter { favById[it.id]?.wouldReturn != false }  //sin los "no volvería"
                         .randomOrNull()
                         ?.let { nav.navigate("detail/${it.id}") }
                 },
@@ -97,7 +103,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {                                                    // NUEVO
+                item {
                     FilterChip(
                         selected = vm.hideBad,
                         onClick = { vm.hideBad = !vm.hideBad },
@@ -118,7 +124,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                     CircularProgressIndicator()
                 }
                 err != null -> ErrorBox(err, onRetry = { start() })
-                list.isEmpty() ->                                         // CAMBIA
+                list.isEmpty() ->
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No hay restaurantes de este tipo cerca")
                     }
@@ -128,7 +134,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                         end = 16.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(list, key = { it.id }) { r ->                   // CAMBIA
+                    items(list, key = { it.id }) { r ->
                         Card(
                             onClick = { nav.navigate("detail/${r.id}") },
                             colors = CardDefaults.cardColors(
@@ -140,7 +146,7 @@ fun NearbyScreen(vm: FoodViewModel, nav: NavController) {
                                 Column(Modifier.weight(1f)) {
                                     Text(r.name, style = MaterialTheme.typography.titleMedium)
                                     Text("${r.cuisine} · ${r.distanceM} m")
-                                    favById[r.id]?.let { f ->             // NUEVO
+                                    favById[r.id]?.let { f ->
                                         Text(
                                             "★".repeat(f.rating) +
                                                     if (f.wouldReturn) " · Volverías" else " · No volverías",

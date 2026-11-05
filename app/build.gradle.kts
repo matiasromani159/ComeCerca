@@ -37,6 +37,7 @@ android {
     }
 }
 
+//imports de librerias (navegar entre paginas, viewmodel, gps, bbdd, etc...)
 dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.0")
     implementation("androidx.compose.material:material-icons-core")

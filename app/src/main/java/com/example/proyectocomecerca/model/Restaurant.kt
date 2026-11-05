@@ -3,7 +3,7 @@ package com.example.proyectocomecerca.model
 import android.location.Location
 import com.example.proyectocomecerca.network.OsmElement
 
-// El "molde" de un restaurante. El ? significa "puede venir vacío (null)".
+//El "molde" de un restaurante. El ? significa "puede venir vacío (null)".
 data class Restaurant(
     val id: Long,
     val name: String,
@@ -12,14 +12,14 @@ data class Restaurant(
     val lon: Double,
     val address: String?,
     val openingHours: String?,
-    val distanceM: Int
+    val distanceM: Int          //metros desde donde estas
 )
 
-// Convierte un elemento de OpenStreetMap en nuestro Restaurant (o null si no sirve)
+//Convierte un elemento de OpenStreetMap en nuestro Restaurant (o null si no sirve)
 fun OsmElement.toRestaurant(myLat: Double, myLon: Double): Restaurant? {
     val t = tags ?: return null
-    val name = t["name"] ?: return null            // sin nombre no nos sirve
-    val la = lat ?: center?.lat ?: return null
+    val name = t["name"] ?: return null            //sin nombre no nos sirve
+    val la = lat ?: center?.lat ?: return null      //Coordenadas
     val lo = lon ?: center?.lon ?: return null
 
     val dist = FloatArray(1)
@@ -27,7 +27,7 @@ fun OsmElement.toRestaurant(myLat: Double, myLon: Double): Restaurant? {
 
     val street = t["addr:street"]
     val number = t["addr:housenumber"]
-    val address = when {
+    val address = when {        //esto es un switch
         street == null -> null
         number == null -> street
         else -> "$street, $number"
@@ -51,5 +51,6 @@ fun cuisineLabel(raw: String?): String =
         else -> "Otras"
     }
 
+//los textos de filtro
 val FILTERS = listOf("Todas", "Mediterránea", "Japonesa", "Italiana", "Española",
     "Hamburguesas", "China", "Mexicana", "Otras", "Sin especificar")
